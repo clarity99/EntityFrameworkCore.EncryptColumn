@@ -17,7 +17,7 @@ namespace EntityFrameworkCore.EncryptColumn.Util
 
         public string Encrypt(string dataToEncrypt)
         {
-            if (string.IsNullOrEmpty(key))
+            if (string.IsNullOrEmpty(key) || key=="nokey")
                 throw new ArgumentNullException("EncryptionKey", "Please initialize your encryption key.");
 
             if (string.IsNullOrEmpty(dataToEncrypt))
@@ -66,30 +66,36 @@ namespace EntityFrameworkCore.EncryptColumn.Util
 
             byte[] iv = new byte[16];
             byte[] salt = new byte[16];
-
-            using (Aes aes = Aes.Create())
+            try
             {
-                var buffer = Convert.FromBase64String(dataToDecrypt);
-                using (MemoryStream memoryStream = new(buffer))
+                using (Aes aes = Aes.Create())
                 {
-                    memoryStream.Read(salt, 0, salt.Length);
-                    memoryStream.Read(iv, 0, iv.Length);
-
-                    //1234 is considered our pepper - the hard-coded number of mutations to use - ST
-                    using Rfc2898DeriveBytes pdb = new(key, salt, 10000, HashAlgorithmName.SHA512);
-
-                    aes.Key = pdb.GetBytes(32);
-                    aes.IV = iv;
-                    ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
-                    using (CryptoStream cryptoStream = new((Stream)memoryStream, decryptor, CryptoStreamMode.Read))
+                    var buffer = Convert.FromBase64String(dataToDecrypt);
+                    using (MemoryStream memoryStream = new(buffer))
                     {
-                        using (StreamReader streamReader = new((Stream)cryptoStream))
+                        memoryStream.Read(salt, 0, salt.Length);
+                        memoryStream.Read(iv, 0, iv.Length);
+
+                        //1234 is considered our pepper - the hard-coded number of mutations to use - ST
+                        using Rfc2898DeriveBytes pdb = new(key, salt, 10000, HashAlgorithmName.SHA512);
+
+                        aes.Key = pdb.GetBytes(32);
+                        aes.IV = iv;
+                        ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+                        using (CryptoStream cryptoStream = new((Stream)memoryStream, decryptor, CryptoStreamMode.Read))
                         {
-                            return streamReader.ReadToEnd();
+                            using (StreamReader streamReader = new((Stream)cryptoStream))
+                            {
+                                return streamReader.ReadToEnd();
+                            }
                         }
                     }
                 }
+            } catch (Exception ex)
+            {
+                return "Error in decryption";
             }
+
         }
     }
 }
