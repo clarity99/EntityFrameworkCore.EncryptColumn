@@ -3,7 +3,10 @@ namespace EntityFrameworkCore.EncryptColumn.Interfaces
 {
     public interface IEncryptionProvider
     {
-        string Encrypt(string dataToEncrypt);
-        string Decrypt(string dataToDecrypt);
+        string EncryptString(string dataToEncrypt);
+        string DecryptString(string dataToDecrypt);
+
+        byte[] EncryptByteArr(byte[] dataToEncrypt);
+        byte[] DecryptByteArr(byte[] dataToDecrypt);
     }
 }
