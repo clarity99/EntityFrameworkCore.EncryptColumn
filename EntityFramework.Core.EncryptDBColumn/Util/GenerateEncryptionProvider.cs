@@ -86,7 +86,7 @@ namespace EntityFrameworkCore.EncryptColumn.Util
             }
             catch (Exception ex)
             {
-                return "Error in decryption";
+                throw new CryptographicException("Error in decryption", ex);
             }
         }
 
@@ -128,6 +128,7 @@ namespace EntityFrameworkCore.EncryptColumn.Util
             catch (Exception ex)
             {
                 throw new CryptographicException("Error in decryption", ex);
+                
             }
 
             return decryptedData;
