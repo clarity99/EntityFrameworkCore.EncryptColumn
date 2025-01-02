@@ -8,73 +8,130 @@ namespace EntityFrameworkCore.EncryptColumn.Util
 {
     public class GenerateEncryptionProvider : IEncryptionProvider
     {
-        private readonly string key;
+        private readonly byte[] key;
+        private readonly RandomNumberGenerator rng = RandomNumberGenerator.Create();
         public GenerateEncryptionProvider(string key)
         {
-            this.key = key;
-        }
-
-        public string Encrypt(string dataToEncrypt)
-        {
-            if (string.IsNullOrEmpty(key))
+            if (key == "nokey")
                 throw new ArgumentNullException("EncryptionKey", "Please initialize your encryption key.");
 
+            this.key = Convert.FromBase64String(key);
+           
+        }
+
+        
+        public string EncryptString(string dataToEncrypt)
+        {
             if (string.IsNullOrEmpty(dataToEncrypt))
                 return string.Empty;
-                
-            byte[] iv = new byte[16];
-            byte[] array;
+            
 
-            using (Aes aes = Aes.Create())
-            {
-                aes.Key = Encoding.UTF8.GetBytes(key);
-                aes.IV = iv;
+            byte[] dataBytes = Encoding.UTF8.GetBytes(dataToEncrypt);
+            byte[] encryptedBytes = EncryptByteArr(dataBytes);
 
-                ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
-                using (MemoryStream memoryStream = new MemoryStream())
-                {
-                    using (CryptoStream cryptoStream = new CryptoStream((Stream)memoryStream, encryptor, CryptoStreamMode.Write))
-                    {
-                        using (StreamWriter streamWriter = new StreamWriter((Stream)cryptoStream))
-                        {
-                            streamWriter.Write(dataToEncrypt);
-                        }
-                        array = memoryStream.ToArray();
-                    }
-                }
-            }
-            string result = Convert.ToBase64String(array);
-            return result;
+            return Convert.ToBase64String(encryptedBytes);
         }
 
-        public string Decrypt(string dataToDecrypt)
+        public byte[] EncryptByteArr(byte[] dataToEncrypt)
         {
-            if (string.IsNullOrEmpty(key))
-                throw new ArgumentNullException("EncryptionKey", "Please initialize your encryption key.");
+            if (dataToEncrypt.Length == 0)
+                return Array.Empty<byte>();
+           
 
-            if (string.IsNullOrEmpty(dataToDecrypt))
-                return string.Empty;
-                
             byte[] iv = new byte[16];
+            rng.GetBytes(iv);
+            // byte[] salt = new byte[16];
+            // rng.GetBytes(salt);
+            byte[] encryptedData;
 
             using (Aes aes = Aes.Create())
             {
-                aes.Key = Encoding.UTF8.GetBytes(key);
-                aes.IV = iv;
-                ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
-
-                var buffer = Convert.FromBase64String(dataToDecrypt);
-                using (MemoryStream memoryStream = new MemoryStream(buffer))
+                using (MemoryStream memoryStream = new())
                 {
-                    using (CryptoStream cryptoStream = new CryptoStream((Stream)memoryStream, decryptor, CryptoStreamMode.Read))
+                    //Write salt and IV to stream prior to encryption - ST
+                    //memoryStream.Write(salt, 0, salt.Length);
+                    memoryStream.Write(iv, 0, iv.Length);
+
+                    //1234 is considered our pepper - the hard-coded number of mutations to use - ST
+                    //using Rfc2898DeriveBytes pdb = new(key, salt, 10000, HashAlgorithmName.SHA512);
+                    aes.Key = key;
+                    aes.IV = iv;
+
+                    ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+                    using (CryptoStream cryptoStream = new((Stream)memoryStream, encryptor, CryptoStreamMode.Write))
                     {
-                        using (StreamReader streamReader = new StreamReader((Stream)cryptoStream))
+                        cryptoStream.Write(dataToEncrypt, 0, dataToEncrypt.Length);
+                    }
+
+                    encryptedData = memoryStream.ToArray();
+                }
+            }
+
+            return encryptedData;
+        }
+
+       
+
+        public string DecryptString(string dataToDecrypt)
+        {
+            if (string.IsNullOrEmpty(dataToDecrypt))
+                return string.Empty;
+
+            try
+            {
+                byte[] encryptedBytes = Convert.FromBase64String(dataToDecrypt);
+                byte[] decryptedBytes = DecryptByteArr(encryptedBytes);
+
+                return Encoding.UTF8.GetString(decryptedBytes);
+            }
+            catch (Exception ex)
+            {
+                throw new CryptographicException("Error in decryption", ex);
+            }
+        }
+
+        public byte[] DecryptByteArr(byte[] dataToDecrypt)
+        {
+            if (dataToDecrypt.Length == 0)
+                return Array.Empty<byte>();
+
+            byte[] iv = new byte[16];
+            // byte[] salt = new byte[16];
+            byte[] decryptedData;
+
+            try
+            {
+                using (Aes aes = Aes.Create())
+                {
+                    using (MemoryStream memoryStream = new(dataToDecrypt))
+                    {
+                        // memoryStream.Read(salt, 0, salt.Length);
+                        memoryStream.Read(iv, 0, iv.Length);
+
+                        //1234 is considered our pepper - the hard-coded number of mutations to use - ST
+                        // using Rfc2898DeriveBytes pdb = new(key, salt, 10000, HashAlgorithmName.SHA512);
+                        aes.Key = key;
+                        aes.IV = iv;
+
+                        ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+                        using (CryptoStream cryptoStream = new((Stream)memoryStream, decryptor, CryptoStreamMode.Read))
                         {
-                            return streamReader.ReadToEnd();
+                            using (MemoryStream decryptedStream = new())
+                            {
+                                cryptoStream.CopyTo(decryptedStream);
+                                decryptedData = decryptedStream.ToArray();
+                            }
                         }
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                throw new CryptographicException("Error in decryption", ex);
+                
+            }
+
+            return decryptedData;
         }
     }
 }
