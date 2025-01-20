@@ -106,7 +106,7 @@ namespace EntityFrameworkCore.EncryptColumn.Util
                     using (MemoryStream memoryStream = new(dataToDecrypt))
                     {
                         // memoryStream.Read(salt, 0, salt.Length);
-                        memoryStream.Read(iv, 0, iv.Length);
+                        memoryStream.ReadExactly(iv, 0, iv.Length);
 
                         //1234 is considered our pepper - the hard-coded number of mutations to use - ST
                         // using Rfc2898DeriveBytes pdb = new(key, salt, 10000, HashAlgorithmName.SHA512);
