@@ -403,3 +403,4 @@ ASALocalRun/
 
 # Local History for Visual Studio
 .localhistory/
+EntityFramework.Core.EncryptDBColumn/packages.lock.json
