@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <PackOnBuild>true</PackOnBuild>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageVersion>8.0.8</PackageVersion>
     <Authors>Emre Kizildas</Authors>
     <PackageIconUrl>https://github.com/emrekizildas/EntityFrameworkCore.EncryptColumn/raw/main/EntityFramework.Core.EncryptDBColumn/icon.png</PackageIconUrl>
@@ -26,9 +26,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.5" />
-    <PackageReference Include="NuGet.Build.Packaging" Version="0.2.2">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
+
   </ItemGroup>
 </Project>
